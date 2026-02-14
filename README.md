@@ -1,43 +1,83 @@
-# ON NIFTY100 — Project Summary & How to Run
+# ON NIFTY100 - VaR Forecasting Framework
 
-Summary
--	This workspace contains data and scripts used to prepare and explore NIFTY100 constituent data and preprocessed CSVs for neural-network experiments.
--	Top-level folders:
-	- `data/` — contains `nifty100_constituents.csv` and `nifty100.py` (utility script for NIFTY100 data).
-	- `NNet_data/` — many per-ticker CSVs (different preprocessing variants) used for neural-network training/evaluation.
-	- `python/` — additional Python scripts and helpers (project-specific scripts may live here).
-	- `r/` — R scripts (if present).
+This project implements a comprehensive framework for Value-at-Risk (VaR) forecasting on NIFTY100 constituents. It compares traditional statistical methods with advanced deep learning approaches (LSTM-MDN) to evaluate market risk during different market conditions (e.g., "Calm" vs. "Covid" periods).
 
-Quick prerequisites
--	Python 3.8+ (Windows): install from python.org or use an existing environment.
--	Recommended Python packages (install as needed): `pandas`, `numpy`. Other packages (e.g., `scikit-learn`, `tensorflow`, `torch`) may be required by specific scripts in `python/` — check those scripts for exact imports.
+## 📂 Project Structure
 
-Setup (Windows PowerShell)
-```
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install --upgrade pip
-# If you have a requirements.txt, run:
-# pip install -r requirements.txt
-# Otherwise install minimal packages:
-pip install pandas numpy
-```
+- **`r/`**: Core Python codebase (despite the name, these are Python scripts).
+  - `initialisation.py`: Configuration file for setting simulation parameters (period, stocks, models).
+  - `execution.py`: Main orchestration script for data fetching, model execution, and backtesting.
+  - `traditional_models.py` & `GARCH_models.py`: Implementations of Historical, CMM, and GARCH models.
+  - `backtesting.py`: VaR backtesting logic (Kupiec, Christoffersen tests).
+  - `Visualisations.py`: Plotting modules.
+  - `api_yahoo_finance.py`: Data fetching utility using `yfinance`.
+  
+- **`python/`**: Deep Learning modules.
+  - `lstm_mdn_built.py`: Standalone TensorFlow script to train LSTM-Mixture Density Networks (MDN) and generate VaR forecasts.
 
-How to run
--	Inspect or run the small utility in `data/`:
-```
-python data/nifty100.py
-```
--	Load CSVs from `NNet_data/` with `pandas.read_csv()` for analysis or model training.
--	Run other project scripts from the `python/` directory as needed, e.g.:
-```
-python python/your_script.py
+- **`data/`**: Static data assets.
+  - `nifty100_constituents.csv`: List of NIFTY100 stock symbols.
+  - `nifty100.py`: Utility script.
+
+- **`NNet_data/`**: Directory where LSTM-MDN model predictions are saved.
+- **`r/data_files/`**: Intermediate storage for processed stock data.
+- **`r/results/`**: Final summary tables of backtesting results.
+- **`r/plots/`**: Generated visualizations.
+
+## 🚀 Setup & Installation
+
+Ensure you have Python 3.8+ installed. Install the required dependencies:
+
+```bash
+pip install numpy pandas scipy matplotlib seaborn yfinance tensorflow
 ```
 
-Notes & tips
--	This README is intentionally concise — consult individual scripts for required dependencies and usage examples (look at the script header or top-level docstring).
--	No files were modified; this README was added only.
+## ⚙️ Configuration
 
-If you'd like, I can also:
--	Generate a `requirements.txt` by scanning imports, or
--	Add short usage examples per-script.
+Open `r/initialisation.py` to adjust simulation parameters:
+- `period`: Set to `"calm"` (2017-2018) or `"covid"` (2021-2022).
+- `stocks`: Select specific stocks from the NIFTY100 list.
+- `models`: Enable/disable specific models.
+- `source_NNet_results`: Set to `True` to include LSTM-MDN results in the final analysis.
+
+## 🏃 Usage Workflow
+
+The project follows a 3-step execution pipeline:
+
+### Step 1: Data Initialization & Baseline Models
+Run the execution script to download data from Yahoo Finance and run traditional/GARCH models.
+```bash
+python r/execution.py
+```
+*This will create `r/data_files/` with processed CSVs.*
+
+### Step 2: Train Neural Networks (LSTM-MDN)
+Run the deep learning script to train the LSTM-MDN models (Vanilla, Regularized, and 3-Component).
+```bash
+python python/lstm_mdn_built.py
+```
+*This reads data from `r/data_files/` and saves predictions to `NNet_data/`.*
+
+### Step 3: Final Integration & Backtesting
+Run the execution script again to integrate the neural network results and generate final reports.
+```bash
+python r/execution.py
+```
+*Ensure `source_NNet_results = True` is set in `r/initialisation.py`.*
+
+## 📊 Outputs
+
+After completing the pipeline, you will find:
+- **Visualizations**: `r/plots/` (VaR comparison plots, returns distributions, heatmaps).
+- **Backtesting Results**: `r/results/final_tables/` (CSV summaries of model performance).
+- **Test Sets**: `r/test_sets/` (Detailed daily VaR forecasts and violations).
+
+## 🧠 Models Implemented
+
+1.  **Historical Simulation**: Non-parametric baseline.
+2.  **CMM**: Conditional Moment Model.
+3.  **GARCH**: Generalized Autoregressive Conditional Heteroskedasticity (Gaussian/GED).
+4.  **LSTM-MDN**: Long Short-Term Memory Network combined with Mixture Density Networks.
+    - *Vanilla*: 2-component mixture.
+    - *Regularized*: 2-component mixture with regularization.
+    - *3-Component*: 3-component mixture (C3).
